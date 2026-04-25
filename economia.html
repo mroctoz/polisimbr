@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Pátria - Economia & Mundo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body { background: url('https://images.unsplash.com/photo-1518005020951-eccb494ad742?q=80&w=2665') no-repeat center fixed; background-size: cover; color: #0f172a; font-family: 'Segoe UI', sans-serif; }
+        .aero-panel { background: linear-gradient(180deg, rgba(245,250,255,0.85) 0%, rgba(255,255,255,0.6) 100%); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.9); box-shadow: 0 4px 16px rgba(0,0,0,0.08); border-radius: 16px; }
+        .aero-btn { background: linear-gradient(180deg, #b0d4ff 0%, #89f7fe 49%, #4facfe 50%, #00a8ff 100%); border-radius: 99px; color: #fff; font-weight: bold; padding: 10px 20px; border: 1px solid #fff; cursor: pointer; text-shadow: 0 1px 2px rgba(0,0,0,0.4); }
+        .nav-link { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-radius: 99px; margin-bottom: 8px; font-weight: bold; color: #334155; background: rgba(255,255,255,0.4); border: 1px solid #fff; text-decoration: none; }
+        .nav-link.active { background: linear-gradient(90deg, #4facfe, #00f2fe); color: white; transform: scale(1.05); }
+    </style>
+</head>
+<body class="h-screen overflow-hidden">
+    <div id="root" class="h-full"></div>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const Icon = ({n}) => <i className={`fas fa-${n}`}></i>;
+
+        const App = () => {
+            const [state, setState] = useState(() => JSON.parse(localStorage.getItem('patria_state')));
+            useEffect(() => { localStorage.setItem('patria_state', JSON.stringify(state)); }, [state]);
+
+            if(!state) return <div>Carregue o jogo no index.html</div>;
+
+            const adjSelic = (v) => {
+                setState(s => {
+                    let ns={...s}; 
+                    ns.economy.selic = Math.max(2, ns.economy.selic + v);
+                    // Efeito Imediato Simulado
+                    ns.economy.inflation -= (v * 0.5);
+                    ns.economy.gdp -= (v * 0.3);
+                    return ns;
+                });
+            };
+
+            const signTreaty = (country) => {
+                if(state.diplomacy.treaties.includes(country)) return alert("Tratado já assinado.");
+                setState(s => {
+                    let ns={...s};
+                    ns.diplomacy.treaties.push(country);
+                    ns.economy.gdp += 1.5;
+                    ns.economy.budget += 40;
+                    ns.society.approval += 3;
+                    alert(`Tratado assinado com ${country}! Injeção direta no PIB e Balança Comercial.`);
+                    return ns;
+                });
+            };
+
+            const sanction = (country) => {
+                setState(s => {
+                    let ns={...s};
+                    ns.diplomacy.sanctions.push(country);
+                    ns.economy.inflation += 2.0; // Punição por sanção (guerra comercial)
+                    ns.society.approval += 5; // Medida nacionalista agrada povo
+                    alert(`Sanções declaradas contra ${country}. Agradou a base nacionalista, mas o mercado reagiu mal.`);
+                    return ns;
+                });
+            };
+
+            return (
+                <div className="flex h-full p-4 gap-4">
+                    <aside className="w-64 aero-panel flex flex-col p-4">
+                        <div className="text-center mb-6"><h2 className="text-xl font-bold">{state.player.name}</h2></div>
+                        <nav className="flex-1">
+                            <a href="index.html" className="nav-link"><Icon n="home"/> Executivo</a>
+                            <a href="legislativo.html" className="nav-link"><Icon n="gavel"/> Legislativo & STF</a>
+                            <a href="economia.html" className="nav-link active"><Icon n="chart-line"/> Economia & Mundo</a>
+                            <a href="campanha.html" className="nav-link"><Icon n="bullhorn"/> Eleições</a>
+                        </nav>
+                    </aside>
+                    
+                    <main className="flex-1 overflow-y-auto scrollbar-hide flex flex-col gap-4">
+                        <div className="grid grid-cols-3 gap-4">
+                            <div className="aero-panel p-5 text-center"><h3 className="font-bold text-slate-500">PIB</h3><p className={`text-4xl font-extrabold mt-2 ${state.economy.gdp>0?'text-green-500':'text-red-500'}`}>{state.economy.gdp>0?'+':''}{state.economy.gdp.toFixed(1)}%</p></div>
+                            <div className="aero-panel p-5 text-center"><h3 className="font-bold text-slate-500">Inflação (IPCA)</h3><p className="text-4xl font-extrabold mt-2 text-red-500">{state.economy.inflation.toFixed(1)}%</p></div>
+                            <div className="aero-panel p-5 text-center"><h3 className="font-bold text-slate-500">Desemprego</h3><p className="text-4xl font-extrabold mt-2 text-blue-500">{state.economy.unemployment.toFixed(1)}%</p></div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 flex-1">
+                            <div className="aero-panel p-5">
+                                <h3 className="text-lg font-bold mb-4 border-b pb-2"><Icon n="building-columns"/> Banco Central (COPOM)</h3>
+                                <div className="text-center mb-6">
+                                    <p className="text-sm font-bold text-slate-500">Taxa Selic Atual</p>
+                                    <p className="text-5xl font-extrabold text-slate-800">{state.economy.selic.toFixed(2)}%</p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button onClick={()=>adjSelic(-0.5)} className="flex-1 bg-red-500 text-white font-bold py-3 rounded-full hover:bg-red-600 shadow"><Icon n="arrow-down"/> Reduzir Juros</button>
+                                    <button onClick={()=>adjSelic(0.5)} className="flex-1 bg-green-500 text-white font-bold py-3 rounded-full hover:bg-green-600 shadow"><Icon n="arrow-up"/> Aumentar Juros</button>
+                                </div>
+                                <p className="text-xs text-slate-500 text-center mt-4">Juros altos freiam a inflação, mas destroem o PIB e aumentam desemprego. Juros baixos fazem o inverso.</p>
+                            </div>
+
+                            <div className="aero-panel p-5">
+                                <h3 className="text-lg font-bold mb-4 border-b pb-2"><Icon n="globe"/> Relações Internacionais</h3>
+                                <div className="space-y-4">
+                                    {['Estados Unidos', 'China', 'União Europeia'].map(c => (
+                                        <div key={c} className="bg-white/60 p-3 rounded shadow-sm flex justify-between items-center">
+                                            <span className="font-bold text-slate-700"><Icon n="flag"/> {c}</span>
+                                            <div className="flex gap-2">
+                                                <button onClick={()=>signTreaty(c)} className="text-[10px] bg-blue-500 text-white px-2 py-1 rounded">Acordo Com.</button>
+                                                <button onClick={()=>sanction(c)} className="text-[10px] bg-slate-800 text-white px-2 py-1 rounded">Embargo</button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+        const root = ReactDOM.createRoot(document.getElementById('root')); root.render(<App />);
+    </script>
+</body>
+</html>
