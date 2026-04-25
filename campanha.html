@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Pátria - Eleições & Campanhas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body { background: url('https://images.unsplash.com/photo-1540910419892-4a36d2c3266c?q=80&w=2670') no-repeat center fixed; background-size: cover; color: #0f172a; font-family: 'Segoe UI', sans-serif; }
+        .aero-panel { background: linear-gradient(180deg, rgba(245,250,255,0.9) 0%, rgba(255,255,255,0.7) 100%); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.9); box-shadow: 0 8px 32px rgba(0,0,0,0.15); border-radius: 16px; }
+        .aero-btn { background: linear-gradient(180deg, #b0d4ff 0%, #89f7fe 49%, #4facfe 50%, #00a8ff 100%); border-radius: 99px; color: #fff; font-weight: bold; padding: 10px 20px; border: 1px solid #fff; cursor: pointer; text-shadow: 0 1px 2px rgba(0,0,0,0.4); }
+        .nav-link { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-radius: 99px; margin-bottom: 8px; font-weight: bold; color: #334155; background: rgba(255,255,255,0.4); border: 1px solid #fff; text-decoration: none; }
+        .nav-link.active { background: linear-gradient(90deg, #4facfe, #00f2fe); color: white; transform: scale(1.05); }
+        .progress-bg { background: rgba(255,255,255,0.5); border-radius: 99px; overflow: hidden; height: 24px; border: 1px solid rgba(255,255,255,0.8); }
+    </style>
+</head>
+<body class="h-screen overflow-hidden">
+    <div id="root" class="h-full"></div>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const Icon = ({n}) => <i className={`fas fa-${n}`}></i>;
+
+        const App = () => {
+            const [state, setState] = useState(() => JSON.parse(localStorage.getItem('patria_state')));
+            const [campaign, setCampaign] = useState({ week: 1, budget: 150, playerPoll: 0, oppPoll: 0 });
+
+            useEffect(() => {
+                if(state && campaign.playerPoll === 0) {
+                    setCampaign(c => ({...c, playerPoll: state.society.approval, oppPoll: 100 - state.society.approval, budget: state.economy.budget * 0.5}));
+                }
+            }, [state]);
+
+            if(!state) return <div>Inicie no index.html</div>;
+
+            const executeStrat = (type, cost) => {
+                if(campaign.budget < cost) return alert("Fundo Eleitoral Insuficiente!");
+                
+                let pBoost = 0; let oDrop = 0;
+                if(type === 'tv') pBoost = Math.random()*4;
+                if(type === 'social') pBoost = Math.random()*2 + 1;
+                if(type === 'fakenews') {
+                    if(Math.random() > 0.4) { oDrop = 5; alert("Ataque nas redes destruiu a imagem da oposição!"); }
+                    else { pBoost = -8; alert("TSE barrou sua campanha de Fake News. Escândalo gigantesco!"); }
+                }
+                if(type === 'debate') {
+                    if(campaign.playerPoll > 45) { pBoost = 3; alert("Você dominou o debate."); }
+                    else { pBoost = -3; alert("Sua rejeição alta te fez ser massacrado ao vivo."); }
+                }
+
+                setCampaign(c => ({
+                    ...c, week: c.week + 1, budget: c.budget - cost,
+                    playerPoll: Math.max(0, Math.min(100, c.playerPoll + pBoost)),
+                    oppPoll: Math.max(0, Math.min(100, c.oppPoll - oDrop - (pBoost/2)))
+                }));
+            };
+
+            const finishElections = () => {
+                const won = campaign.playerPoll > campaign.oppPoll;
+                if(won) {
+                    alert("VITÓRIA NAS URNAS! Você foi reeleito. O mandato recomeça.");
+                    setState(s => ({...s, turn: 1, economy: {...s.economy, budget: s.economy.budget + 100}, society: {...s.society, approval: 60}}));
+                    window.location.href = 'index.html';
+                } else {
+                    alert("DERROTA. A oposição venceu as eleições. Fim da linha para seu projeto de poder.");
+                    localStorage.removeItem('patria_state');
+                    window.location.href = 'index.html';
+                }
+            };
+
+            return (
+                <div className="flex h-full p-4 gap-4 bg-blue-900/40">
+                    <aside className="w-64 aero-panel flex flex-col p-4">
+                        <div className="text-center mb-6"><h2 className="text-xl font-bold">{state.player.name}</h2></div>
+                        <nav className="flex-1">
+                            <a href="index.html" className="nav-link"><Icon n="home"/> Executivo</a>
+                            <a href="legislativo.html" className="nav-link"><Icon n="gavel"/> Legislativo & STF</a>
+                            <a href="economia.html" className="nav-link"><Icon n="chart-line"/> Economia & Mundo</a>
+                            <a href="campanha.html" className="nav-link active"><Icon n="bullhorn"/> Eleições</a>
+                        </nav>
+                    </aside>
+                    
+                    <main className="flex-1 flex flex-col gap-4">
+                        <div className="aero-panel p-6 flex justify-between items-center bg-white/90">
+                            <div>
+                                <h2 className="text-3xl font-extrabold text-blue-600"><Icon n="vote-yea"/> Eleições Nacionais (TSE)</h2>
+                                <p className="text-slate-600 font-bold">Semana {campaign.week} de 4 da Campanha Oficial</p>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-sm font-bold text-slate-500">Fundo Eleitoral</p>
+                                <p className="text-3xl font-extrabold text-green-600">R$ {campaign.budget.toFixed(0)} Bi</p>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-1 gap-4">
+                            <div className="w-1/2 aero-panel p-6 space-y-4">
+                                <h3 className="text-xl font-bold border-b pb-2">Central de Estratégia</h3>
+                                <button onClick={()=>executeStrat('tv', 40)} className="w-full text-left p-4 bg-white/70 border rounded-xl hover:bg-white shadow transition"><h4 className="font-bold text-lg"><Icon n="tv"/> Horário Eleitoral TV</h4><p className="text-sm text-slate-600">Custo: R$ 40 Bi. Aumenta massivamente a intenção de voto no geral.</p></button>
+                                <button onClick={()=>executeStrat('social', 15)} className="w-full text-left p-4 bg-white/70 border rounded-xl hover:bg-white shadow transition"><h4 className="font-bold text-lg"><Icon n="hashtag"/> Impulsionamento em Redes</h4><p className="text-sm text-slate-600">Custo: R$ 15 Bi. Crescimento constante e seguro.</p></button>
+                                <button onClick={()=>executeStrat('debate', 0)} className="w-full text-left p-4 bg-white/70 border rounded-xl hover:bg-white shadow transition"><h4 className="font-bold text-lg"><Icon n="microphone"/> Participar de Debate ao Vivo</h4><p className="text-sm text-slate-600">Grátis. Se seu governo for bom, massacra a oposição. Se for ruim, é suicídio eleitoral.</p></button>
+                                <button onClick={()=>executeStrat('fakenews', 25)} className="w-full text-left p-4 bg-slate-800 border rounded-xl hover:bg-slate-700 shadow transition text-white"><h4 className="font-bold text-lg text-red-400"><Icon n="user-secret"/> Disparos em Massa (Fake News)</h4><p className="text-sm text-slate-300">Custo: R$ 25 Bi. ALTO RISCO. Pode destruir a oposição ou vazar para o TSE e acabar com a sua campanha.</p></button>
+                            </div>
+
+                            <div className="w-1/2 aero-panel p-6 flex flex-col">
+                                <h3 className="text-xl font-bold border-b pb-2 mb-6">Pesquisa DataSim (Intenção de Voto)</h3>
+                                
+                                <div className="mb-8 relative">
+                                    <div className="flex justify-between font-bold mb-2 text-lg"><span style={{color: state.player.color}}>{state.player.party} (Você)</span><span>{campaign.playerPoll.toFixed(1)}%</span></div>
+                                    <div className="progress-bg"><div className="h-full transition-all duration-700 shadow-inner" style={{width: `${campaign.playerPoll}%`, background: state.player.color}}></div></div>
+                                </div>
+                                
+                                <div className="mb-8 relative">
+                                    <div className="flex justify-between font-bold mb-2 text-lg text-red-600"><span>Oposição Unida</span><span>{campaign.oppPoll.toFixed(1)}%</span></div>
+                                    <div className="progress-bg"><div className="h-full transition-all duration-700 shadow-inner bg-red-500" style={{width: `${campaign.oppPoll}%`}}></div></div>
+                                </div>
+
+                                {campaign.week > 4 && (
+                                    <button onClick={finishElections} className="mt-auto bg-green-500 hover:bg-green-600 text-white font-bold py-5 rounded-full text-xl shadow-lg animate-pulse">
+                                        <Icon n="flag-checkered"/> Abrir Urnas e Apurar Votos!
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+        const root = ReactDOM.createRoot(document.getElementById('root')); root.render(<App />);
+    </script>
+</body>
+</html>
