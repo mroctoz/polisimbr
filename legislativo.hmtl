@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Pátria - Legislativo & Judiciário</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body { background: url('https://images.unsplash.com/photo-1518005020951-eccb494ad742?q=80&w=2665') no-repeat center fixed; background-size: cover; color: #0f172a; font-family: 'Segoe UI', sans-serif; }
+        .aero-panel { background: linear-gradient(180deg, rgba(245,250,255,0.85) 0%, rgba(255,255,255,0.6) 100%); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.9); box-shadow: 0 4px 16px rgba(0,0,0,0.08); border-radius: 16px; }
+        .aero-btn { background: linear-gradient(180deg, #b0d4ff 0%, #89f7fe 49%, #4facfe 50%, #00a8ff 100%); border-radius: 99px; color: #fff; font-weight: bold; padding: 10px 20px; border: 1px solid #fff; cursor: pointer; text-shadow: 0 1px 2px rgba(0,0,0,0.4); }
+        .nav-link { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-radius: 99px; margin-bottom: 8px; font-weight: bold; color: #334155; background: rgba(255,255,255,0.4); border: 1px solid #fff; text-decoration: none; }
+        .nav-link.active { background: linear-gradient(90deg, #4facfe, #00f2fe); color: white; transform: scale(1.05); }
+    </style>
+</head>
+<body class="h-screen overflow-hidden">
+    <div id="root" class="h-full"></div>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const Icon = ({n}) => <i className={`fas fa-${n}`}></i>;
+
+        const AI_BILLS =[
+            { id: 'O1', title: 'Aumento Salarial Legislativo', cost: 0, desc: 'Oposição quer aumentar salários. Se passar, inflação sobe e orçamento despenca.', eff: { budget: -40, inflation: 1.5, approval: -10 } },
+            { id: 'O2', title: 'Impeachment de Ministro', cost: 0, desc: 'Tentativa de derrubar seu gabinete.', eff: { approval: -15, protest: 20 } },
+            { id: 'O3', title: 'Redução de Maioridade Penal', cost: 0, desc: 'Pauta polêmica da base conservadora.', eff: { protest: 15, security: 10 } }
+        ];
+
+        const PLAYER_BILLS =[
+            { id: 'P1', title: 'Reforma Tributária (IVA)', cost: 50, desc: 'Unifica impostos. Acelera PIB.', eff: { gdp: 2.0, budget: 30, approval: 5 } },
+            { id: 'P2', title: 'Privatização dos Correios', cost: 20, desc: 'Venda da estatal. Aumenta caixa.', eff: { budget: 80, unemployment: 1.0, protest: 10 } },
+            { id: 'P3', title: 'Bolsa Família Plus', cost: 80, desc: 'Massivo programa social.', eff: { approval: 15, budget: -50, inflation: 2.0 } }
+        ];
+
+        const App = () => {
+            const [state, setState] = useState(() => JSON.parse(localStorage.getItem('patria_state')));
+            useEffect(() => { localStorage.setItem('patria_state', JSON.stringify(state)); }, [state]);
+
+            if(!state) return <div>Inicie o jogo primeiro no index.html</div>;
+
+            const buyCoalition = (pid) => {
+                if(state.economy.budget < 30) return alert("Sem Caixa (R$ 30Bi)");
+                setState(s => {
+                    let ns = {...s};
+                    ns.economy.budget -= 30;
+                    ns.congress = ns.congress.map(c => c.id === pid ? {...c, align: Math.min(100, c.align + 30)} : c);
+                    return ns;
+                });
+            };
+
+            const voteBill = (bill, isGov) => {
+                setState(s => {
+                    let ns = {...s};
+                    // Cálculo de votos baseado na aliança atual
+                    let govVotes = ns.congress.reduce((acc, c) => acc + (c.seats * (c.align/100)), 0);
+                    const passed = isGov ? govVotes >= 257 : (513 - govVotes) >= 257;
+
+                    if(isGov) ns.economy.budget -= bill.cost; // Custa p/ governo propor
+
+                    if (passed) {
+                        alert(`VOTAÇÃO CONCLUÍDA: Projeto '${bill.title}' APROVADO!`);
+                        if(bill.eff.budget) ns.economy.budget += bill.eff.budget;
+                        if(bill.eff.gdp) ns.economy.gdp += bill.eff.gdp;
+                        if(bill.eff.approval) ns.society.approval += bill.eff.approval;
+                        if(bill.eff.inflation) ns.economy.inflation += bill.eff.inflation;
+                        if(bill.eff.protest) ns.society.protest += bill.eff.protest;
+                    } else {
+                        alert(`VOTAÇÃO CONCLUÍDA: Projeto '${bill.title}' REJEITADO!`);
+                        if(isGov) ns.society.approval -= 5; // Desgaste do governo
+                    }
+                    
+                    // IA gera um novo projeto aleatório pra infernizar
+                    if(Math.random() > 0.5) {
+                        ns.aiLaws.push(AI_BILLS[Math.floor(Math.random()*AI_BILLS.length)]);
+                    }
+                    
+                    return ns;
+                });
+            };
+
+            const appointSTF = () => {
+                if(state.economy.budget < 20) return;
+                setState(s => ({...s, economy: {...s.economy, budget: s.economy.budget-20}, judiciary: {...s.judiciary, stfAlignment: Math.min(100, s.judiciary.stfAlignment + 15), judgesAppointed: s.judiciary.judgesAppointed + 1}}));
+                alert("Juiz nomeado! O STF está mais alinhado ao seu governo, reduzindo risco de impeachment por corrupção.");
+            };
+
+            const advanceTurn = () => { window.location.href = 'index.html'; /* Centralizamos turno na index pra simplificar fluxo, ou simula aqui. */ };
+
+            return (
+                <div className="flex h-full p-4 gap-4">
+                    <aside className="w-64 aero-panel flex flex-col p-4">
+                        <div className="text-center mb-6">
+                            <h2 className="text-xl font-bold">{state.player.name}</h2>
+                            <p className="text-sm font-bold" style={{color: state.player.color}}>{state.player.party}</p>
+                        </div>
+                        <nav className="flex-1">
+                            <a href="index.html" className="nav-link"><Icon n="home"/> Executivo</a>
+                            <a href="legislativo.html" className="nav-link active"><Icon n="gavel"/> Legislativo & STF</a>
+                            <a href="economia.html" className="nav-link"><Icon n="chart-line"/> Economia & Mundo</a>
+                            <a href="campanha.html" className="nav-link"><Icon n="bullhorn"/> Eleições</a>
+                        </nav>
+                        <div className="text-center font-bold mb-2">Caixa: R$ {state.economy.budget.toFixed(0)} Bi</div>
+                    </aside>
+                    
+                    <main className="flex-1 overflow-y-auto scrollbar-hide flex flex-col gap-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="aero-panel p-5">
+                                <h3 className="text-lg font-bold mb-4 border-b pb-2"><Icon n="users"/> Composição & Coalizão</h3>
+                                <div className="space-y-3">
+                                    {state.congress.map(p => (
+                                        <div key={p.id} className="bg-white/60 p-2 rounded flex justify-between items-center shadow-sm">
+                                            <span className="font-bold text-sm" style={{color: p.color}}>{p.sigla} ({p.seats})</span>
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-20 bg-slate-200 h-2 rounded-full overflow-hidden"><div className="bg-blue-500 h-full" style={{width: `${p.align}%`}}></div></div>
+                                                {p.id !== 'PLAYER' && <button onClick={()=>buyCoalition(p.id)} className="text-[10px] bg-green-500 text-white px-2 py-1 rounded shadow">Comprar Apoio</button>}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            
+                            <div className="aero-panel p-5">
+                                <h3 className="text-lg font-bold mb-4 border-b pb-2"><Icon n="balance-scale"/> Supremo Tribunal Federal (STF)</h3>
+                                <div className="bg-white/60 p-4 rounded text-center shadow-inner">
+                                    <p className="font-bold text-slate-700">Alinhamento da Corte</p>
+                                    <p className="text-4xl font-extrabold text-blue-600 my-2">{state.judiciary.stfAlignment}%</p>
+                                    <p className="text-xs text-slate-500 mb-4">Mantenha alto para blindar aliados contra investigações e Lava-Jato.</p>
+                                    <button onClick={appointSTF} className="bg-slate-800 text-white font-bold py-2 px-4 rounded-full w-full hover:bg-slate-700">Indicar Ministro (R$ 20Bi)</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 flex-1">
+                            <div className="aero-panel p-5">
+                                <h3 className="text-lg font-bold mb-4 border-b pb-2 text-blue-600"><Icon n="file-contract"/> Seus Projetos de Lei</h3>
+                                <div className="space-y-3">
+                                    {PLAYER_BILLS.map(b => (
+                                        <div key={b.id} className="bg-blue-50 p-3 rounded border border-blue-200">
+                                            <div className="flex justify-between">
+                                                <h4 className="font-bold text-sm text-slate-800">{b.title}</h4>
+                                                <button onClick={()=>voteBill(b, true)} className="bg-blue-500 text-white text-[10px] px-2 py-1 rounded">Votar (R$ {b.cost}Bi)</button>
+                                            </div>
+                                            <p className="text-xs text-slate-600 mt-1">{b.desc}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="aero-panel p-5">
+                                <h3 className="text-lg font-bold mb-4 border-b pb-2 text-red-600"><Icon n="exclamation-triangle"/> Pautas da Oposição (IA)</h3>
+                                <div className="space-y-3">
+                                    {state.aiLaws.length === 0 ? <p className="text-sm text-slate-500 text-center py-4">Nenhuma pauta bomba no momento.</p> : null}
+                                    {state.aiLaws.map((b, i) => (
+                                        <div key={i} className="bg-red-50 p-3 rounded border border-red-200">
+                                            <div className="flex justify-between">
+                                                <h4 className="font-bold text-sm text-red-800">{b.title}</h4>
+                                                <button onClick={()=>{ voteBill(b, false); setState(s=>({...s, aiLaws: s.aiLaws.filter((_, idx)=>idx!==i)})); }} className="bg-red-500 text-white text-[10px] px-2 py-1 rounded animate-pulse">Ir a Plenário</button>
+                                            </div>
+                                            <p className="text-xs text-red-600 mt-1">{b.desc}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+        const root = ReactDOM.createRoot(document.getElementById('root')); root.render(<App />);
+    </script>
+</body>
+</html>
